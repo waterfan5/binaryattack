@@ -1,0 +1,495 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+
+<head>
+   <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+   <link rel="icon" href="..\shared\favicon.ico" />
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+   <link rel="stylesheet" href="../shared/hamburgermenu.css" />
+   <script type="text/javascript" src="../shared/hamburgermenu.js"></script>
+   <script type="text/javascript" src="../shared/genanal.js"></script>
+   <script type="text/javascript" src="binaryconversions.js"></script>
+   <script async src="https://www.googletagmanager.com/gtag/js?id=G-1T547128ND"></script>
+
+   <style>
+      table.ActionClass {
+         width: 98%;
+      }
+
+         table.ActionClass td {
+            border: 1px solid;
+            padding-right: 10px;
+            vertical-align: top;
+         }
+
+      input.ActionRight {
+         float: right;
+         vertical-align: bottom;
+      }
+   </style>
+   <title>Binary Attack</title>
+
+
+
+   <script>
+      function checkURLParameter() {
+         // Create a URLSearchParams object based on the current URL's query string
+         const queryParams = new URLSearchParams(window.location.search);
+
+         // Check if the 'URL' parameter is present
+         if (queryParams.has('input')) {
+            document.getElementById("txtInput").value = queryParams.get('input');
+         }
+         if (queryParams.has('cipher')) {
+            OnAction(queryParams.get('cipher'));
+         }
+      }
+
+      function removeOptions(selectElement) {
+         var i, L = selectElement.options.length - 1;
+         for (i = L; i >= 0; i--) {
+            selectElement.remove(i);
+         }
+      }
+
+      function sortSelect(selElem) {
+         var tmpAry = new Array();
+         for (var i = 0; i < selElem.options.length; i++) {
+            tmpAry[i] = new Array();
+            tmpAry[i][0] = selElem.options[i].text;
+            tmpAry[i][1] = selElem.options[i].value;
+         }
+         tmpAry.sort();
+         tmpAry.reverse();
+         while (selElem.options.length > 0) {
+            selElem.options[0] = null;
+         }
+         for (var i = 0; i < tmpAry.length; i++) {
+            var op = new Option(tmpAry[i][0], tmpAry[i][1]);
+            selElem.options[i] = op;
+         }
+         return;
+      }
+
+      function DrawPattern(txt) {
+         txt = txt.replaceAll("0", ".");
+         txt = txt.replaceAll("1", "█");
+         txt = txt.replaceAll(" ", "\n");
+         return (txt);
+      }
+
+      function ShowSelectDetails() {
+         var lb = document.getElementById("lbSequences");
+         var sKeywords = document.getElementById("txtKeywords").textContent;
+         if (lb.selectedIndex == -1) {
+            if (lb.options.length > 0) {
+               lb.selectedIndex = 0;
+            }
+         }
+         var sText = lb.options[lb.selectedIndex].title;
+         var sPatternSearch = sText.substring(sText.lastIndexOf("->") + 2); // Strip back to text
+
+         sText += "\nKeywords=" + GetKeywordsInString(sPatternSearch, sKeywords).join() + "\n";
+         sText += DrawPattern(sPatternSearch);
+         document.getElementById("txtOutput").value = sText;
+      }
+
+      function AddOutput(desc, lineitem) {
+         var sKeywords = document.getElementById("txtKeywords").value;
+         // Score settings
+         var bScoreKeywords = document.getElementById("cbScoreKeywords").checked;
+         var score2 = 0;
+         var sc
+
+         var selectHTML = document.getElementById("lbSequences");
+         var lineitemHTML = document.createElement("option");
+         lineitemHTML.text = desc + "-> " + lineitem;
+         lineitemHTML.title = desc + "-> " + lineitem;
+
+         if (bScoreKeywords) score2 = GetKeywordsInString(lineitem, sKeywords).join().length;
+         if (bScoreKeywords) {
+            lineitemHTML.value = score2;
+            lineitemHTML.text = ("00000" + (lineitemHTML.value).toString()).slice(-5) + "->" + lineitemHTML.text;
+         }
+         selectHTML.add(lineitemHTML);
+      }
+
+      function onClear() {
+         trackEvent("clear");
+         document.getElementById("txtInput").value = "";
+         document.getElementById("txtOutput").value = "";
+         removeOptions(document.getElementById("lbSequences"));
+      }
+
+      function OnAction(actionconvert) {
+         trackEvent("action", actionconvert.toString());
+         var bSortByScore = document.getElementById("cbSortByScore").checked;
+         var inputText = document.getElementById("txtInput").value;
+         var AlphabetText = document.getElementById("txtAlphabet").value.toUpperCase();
+         var InverseOption = document.getElementById("cbInterpretation").value;
+         var Char1Text = document.getElementById("txtChar1").value.toUpperCase();
+         var Char2Text = document.getElementById("txtChar2").value.toUpperCase();
+
+
+         // Set output
+         document.getElementById("txtOutput").value = inputText;
+         removeOptions(document.getElementById("lbSequences"));
+
+         // Add the defaults
+         var txt = inputText.trim();
+         txt = txt.replace(/\n/, " ");
+         txt = txt.toUpperCase();
+
+
+         txt = txt.replaceAll(Char1Text, '0');
+         txt = txt.replaceAll(Char2Text, '1');
+         txt = txt.replaceAll('A', '0');
+         txt = txt.replaceAll('B', '1');
+         txt = txt.replaceAll('-', '0');
+         txt = txt.replaceAll('.', '1');
+
+         revmin = (InverseOption != "irev" ? 0 : 1);
+         revmax = (InverseOption != "inorm" ? 2 : 1);
+
+
+         for (var rev = revmin; rev < revmax; rev++) {
+
+
+            if (rev == 1) {
+               //Create reverse setup
+               txt = txt.replaceAll('1', 'A');
+               txt = txt.replaceAll('0', 'B');
+               txt = txt.replaceAll('A', '0');
+               txt = txt.replaceAll('B', '1');
+            }
+
+            revstring = (rev == 1 ? " (inv)" : "");
+            switch (actionconvert.toUpperCase()) {
+               case "BINARY":
+                  var oBinBreaks = document.getElementById("cbBinary").value;
+                  var oBinOutput = document.getElementById("cbBinaryOutput").value;
+                  if (oBinBreaks == 'Try') {
+                     outputText = TryBinary(txt, 'Breaks', oBinOutput, AlphabetText);
+                     AddOutput("Binary-" + 'Breaks' + revstring, outputText);
+
+                     for (var i = 2; i < 33; i++) {
+                        outputText = TryBinary(txt, i.toString(), oBinOutput, AlphabetText);
+                        AddOutput("Binary-" + i.toString() + revstring, outputText);
+                     }
+                  }
+                  else {
+                     outputText = TryBinary(txt, oBinBreaks, oBinOutput, AlphabetText);
+                     AddOutput("Binary-" + oBinBreaks + revstring, outputText);
+                  }
+                  break;
+               case "BACON":
+                  var oBaconBreaks = document.getElementById("cbBaconStyle").value;
+                  if (oBaconBreaks == 'Try') {
+                     outputText = TryBacon(txt, 'bcstyle1', AlphabetText);
+                     AddOutput("Bacon-" + 'Style 1' + revstring, outputText);
+                     outputText = TryBacon(txt, 'bcstyle2', AlphabetText);
+                     AddOutput("Bacon-" + 'Style 2' + revstring, outputText);
+                  } else {
+                     outputText = TryBacon(txt, oBaconBreaks, AlphabetText);
+                     AddOutput("Bacon-" + oBaconBreaks + revstring, outputText);
+                  }
+                  break;
+               case "BRAILLE":
+                  var oBrailleBreaks = document.getElementById("cbBrailleStyle").value;
+                  if (oBrailleBreaks == 'Try') {
+                     outputText = TryBraille(txt, 'ByColumn');
+                     AddOutput("Braille-" + 'By Column' + revstring, outputText);
+                     outputText = TryBraille(txt, 'ByRow');
+                     AddOutput("Braille-" + 'By Row' + revstring, outputText);
+                  } else {
+                     outputText = TryBraille(txt, oBrailleBreaks);
+                     AddOutput("Braille-" + oBaconBreaks + revstring, outputText);
+                  }
+                  break;
+               case "MORSE":
+                  outputText = TryMorse(txt);
+                  AddOutput("Morse" + revstring, outputText);
+                  break;
+               case "PIXEL":
+                  var oPixBreaks = document.getElementById("cbPixelViewSize").value;
+                  if (oPixBreaks == 'Try') {
+                     outputText = TryPixel(txt, 'Breaks');
+                     AddOutput("Pixel-" + 'Breaks' + revstring, outputText);
+
+                     for (var i = 2; i < 33; i++) {
+                        outputText = TryPixel(txt, i.toString());
+                        AddOutput("Pixel-" + i.toString() + revstring, outputText);
+                     }
+                  }
+                  else {
+                     outputText = TryPixel(txt, oPixBreaks);
+                     AddOutput("Pixel-" + oPixBreaks + revstring, outputText);
+                  }
+                  break;
+            }
+
+
+         }
+
+         if (bSortByScore)
+            sortSelect(document.getElementById("lbSequences"));
+
+         ShowSelectDetails();
+      }
+      function page_init() {
+         HamburgerMenu_Init();
+         checkURLParameter();
+      }
+   </script>
+
+</head>
+<body onload="page_init()">
+   <div id="OuterFrame" style="text-align: left; width: 100%; height: 574px;">
+
+
+
+
+      <!-- Top Navigation Menu -->
+      <div class="topnav">
+         <div style="border: 1px solid black; text-align: left; background-color: blue; color: white; width: 100%; height: 24px;" id="FrameHeader">
+            <big>Binary Attack</big>
+         </div>
+         <!-- Navigation links (hidden by default) -->
+         <div id="myLinks">
+         </div>
+         <!-- "Hamburger menu" / "Bar icon" to toggle the navigation links -->
+         <a href="javascript:void(0);" class="icon" onclick="HamburgerMenu_Open()">
+            <i class="fa fa-bars"></i>
+         </a>
+
+      </div>
+      <form name="InputForm">
+         Provide the text to analyze:
+         <input name="btnClear" value="Clear" onclick="onClear()" type="button">
+         <br>
+
+
+         <textarea id="txtInput" rows=5 style='width: 98%; max-width: 98%;'>0010101010101010101010 010101010101010 100101010101
+</textarea><br>
+
+         <input type="checkbox" id="cbScoreKeywords" checked><label for="cbScoreKeywords">Score keywords"</label>
+         <input type="checkbox" id="cbSortByScore"><label for="cbSortByScore">Sort by score"</label><br />
+         <label for="cbInterpretation">Interpretation</label>
+         <select id="cbInterpretation">
+            <option value='iboth'>Try Both</option>
+            <option value='inorm'>Normal</option>
+            <option value='irev'>Inversed</option>
+         </select>
+         <label for="txtChar1">Char-1 </label><input type="text" id="txtChar1" size="5" value="O">
+         <label for="txtChar2">Char-2 </label><input type="text" id="txtChar2" size="5" value="I">
+         <br />
+         <label for="txtAlphabet">Alphabet </label><input type="text" id="txtAlphabet" size="40" value="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789">
+         <p>
+            Keywords for scanning:<br>
+            <textarea id="txtKeywords" rows=2 style='width: 98%; max-width: 98%;'>
+335,882, NULL, ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT,NINE, TEN, TWENTY, THIRTY, FOURTY, FIFTY,HUNDRED, POINT, DOT, DEGREES, NORTH, WEST, EAST, SOUTH, WALK, FOUND, FIND,CACHE, COORDINATE, LOCATION, SEARCH, GEO, ROUTE, STEP
+</textarea><br>
+
+            <table class="ActionClass">
+               <tr>
+                  <td>
+                     <label for="cbBinary">Word Size</label>
+                     <select id="cbBinary" onchange="OnAction('binary')">
+                        <option value='Try'>Try All</option>
+                        <option value='Breaks'>Use Breaks</option> <!-- Use natural breaks line spaces or newlines -->
+                        <option value=2>2</option>
+                        <option value=3>3</option>
+                        <option value=4>4</option>
+                        <option value=5>5</option>
+                        <option value=6>6</option>
+                        <option value=7>7</option>
+                        <option value=8>8</option>
+                        <option value=9>9</option>
+                        <option value=10>10</option>
+                        <option value=11>11</option>
+                        <option value=12>12</option>
+                        <option value=13>13</option>
+                        <option value=14>14</option>
+                        <option value=15>15</option>
+                        <option value=16>16</option>
+                        <option value=17>17</option>
+                        <option value=18>18</option>
+                        <option value=19>19</option>
+                        <option value=20>20</option>
+                        <option value=21>21</option>
+                        <option value=22>22</option>
+                        <option value=23>23</option>
+                        <option value=24>24</option>
+                        <option value=25>25</option>
+                        <option value=26>26</option>
+                        <option value=27>27</option>
+                        <option value=28>28</option>
+                        <option value=29>29</option>
+                        <option value=30>30</option>
+                        <option value=31>31</option>
+                        <option value=32>32</option>
+                        <option value=33>33</option>
+                        <option value=34>34</option>
+                        <option value=35>35</option>
+                        <option value=36>36</option>
+                        <option value=37>37</option>
+                        <option value=38>38</option>
+                        <option value=39>39</option>
+                        <option value=40>40</option>
+                        <option value=41>41</option>
+                        <option value=42>42</option>
+                        <option value=43>43</option>
+                        <option value=44>44</option>
+                        <option value=45>45</option>
+                        <option value=46>46</option>
+                        <option value=47>47</option>
+                        <option value=48>48</option>
+                        <option value=49>49</option>
+                        <option value=50>50</option>
+                     </select><br />
+                     <label for="cbBinaryOutput">Output</label>
+                     <select id="cbBinaryOutput" onclick="OnAction('binary')">
+                        <option value='Detect'>Detect</option> <!-- <1 to 26 = alphabet 32 to 127 = ascii, otherwise numbers -->
+                        <option value='Numbers'>Numbers</option>
+                        <option value='Alphabet'>Alphabet</option>
+                        <option value='Ascii'>Ascii</option>
+                     </select><br />
+                     <input name="FormAction" class="ActionRight" value="Binary" onclick="OnAction('binary')" type="button">
+                  </td>
+                  <td>
+                     <label for="cbBaconStyle">Type</label>
+                     <select id="cbBaconStyle" onchange="OnAction('bacon')">
+                        <option value='Try'>Try All</option>
+                        <option value='bcstyle1'>Style 1</option>
+                        <option value='bcstyle2'>Style 2</option>
+                     </select><br /><br />
+                     <input name="FormAction" class="ActionRight" value="Bacon Cipher" onclick="OnAction('bacon')" type="button">
+                  </td>
+                  <td>
+                     <label for="cbBrailleStyle">Type</label>
+                     <select id="cbBrailleStyle" onchange="OnAction('braille')">
+                        <option value='Try'>Try All</option>
+                        <option value='ByRow'>Dots By Row</option>
+                        <option value='ByColumn'>Dots By Columns</option>
+                     </select><br /><br />
+                     <input name="FormAction" class="ActionRight" value="Braille" onclick="OnAction('braille')" type="button">
+                  </td>
+                  <td>
+                     <label for="cbMorseStyle">Type</label>
+                     <select id="cbMorseStyle">
+                        <option value='Detect'>Detect</option>
+                     </select><br /><br />
+                     <input name="FormAction" class="ActionRight" value="Morse" onclick="OnAction('morse')" type="button">
+                  </td>
+                  <!--                <td>
+               <label for="cbLCDOrder">Columns</label>
+               <select id="cbLCDOrder">
+                  <option value='Detect'>Detect</option>
+                  <option value='123456789abcde'>123456789abcde</option>
+               </select><br />
+               <label for="cbLCDSize">Size</label>
+               <select id="cbLCDSize">
+                  <option value=7>7</option>
+                  <option value=14>14</option>
+               </select><br />
+               <input name="FormAction" class="ActionRight" value="LCD Display" onclick="OnAction('lcd')" type="button">
+            </td> -->
+                  <td>
+                     <label for="cbPixelViewSize">Columns</label>
+                     <select id="cbPixelViewSize" onchange="OnAction('pixel')">
+                        <option value='Try'>Try All</option>
+                        <option value='Breaks'>Breaks</option>
+                        <option value=2>2</option>
+                        <option value=3>3</option>
+                        <option value=4>4</option>
+                        <option value=5>5</option>
+                        <option value=6>6</option>
+                        <option value=7>7</option>
+                        <option value=8>8</option>
+                        <option value=9>9</option>
+                        <option value=10>10</option>
+                        <option value=11>11</option>
+                        <option value=12>12</option>
+                        <option value=13>13</option>
+                        <option value=14>14</option>
+                        <option value=15>15</option>
+                        <option value=16>16</option>
+                        <option value=17>17</option>
+                        <option value=18>18</option>
+                        <option value=19>19</option>
+                        <option value=20>20</option>
+                        <option value=21>21</option>
+                        <option value=22>22</option>
+                        <option value=23>23</option>
+                        <option value=24>24</option>
+                        <option value=25>25</option>
+                        <option value=26>26</option>
+                        <option value=27>27</option>
+                        <option value=28>28</option>
+                        <option value=29>29</option>
+                        <option value=30>30</option>
+                        <option value=31>31</option>
+                        <option value=32>32</option>
+                        <option value=33>33</option>
+                        <option value=34>34</option>
+                        <option value=35>35</option>
+                        <option value=36>36</option>
+                        <option value=37>37</option>
+                        <option value=38>38</option>
+                        <option value=39>39</option>
+                        <option value=40>40</option>
+                        <option value=41>41</option>
+                        <option value=42>42</option>
+                        <option value=43>43</option>
+                        <option value=44>44</option>
+                        <option value=45>45</option>
+                        <option value=46>46</option>
+                        <option value=47>47</option>
+                        <option value=48>48</option>
+                        <option value=49>49</option>
+                        <option value=50>50</option>
+                        <option value=51>51</option>
+                        <option value=52>52</option>
+                        <option value=53>53</option>
+                        <option value=54>54</option>
+                        <option value=55>55</option>
+                        <option value=56>56</option>
+                        <option value=57>57</option>
+                        <option value=58>58</option>
+                        <option value=59>59</option>
+                        <option value=60>60</option>
+
+                     </select><br /><br />
+                     <input name="FormAction" class="ActionRight" value="Pixel View " onclick="OnAction('pixel')" type="button">
+                  </td>
+                  <!--             <td>
+                             <label for="cbBaudotStyle">Type</label>
+                             <select id="cbBaudotStyle">
+                                <option value='Detect'>Detect</option>
+                                <option value='BaudotF'>BaudotF</option>
+                                <option value='BaudotL'>BaudotL</option>
+                                <option value='MurrayF'>MurrayF</option>
+                                <option value='MurrayL'>MurrayL</option>
+                             </select><br /><br />
+                                <input name="FormAction" class="ActionRight" value="Baudot/Murray" onclick="OnAction('baudot')" type="button">
+                          </td>
+            -->
+               </tr>
+            </table>
+
+
+      </form>
+      <hr>
+      <form name="OutputForm">
+         <label for="lbSequences">Sequence Results</label><br>
+         <select id="lbSequences" style='width:98%' onchange="ShowSelectDetails();" size="4">
+         </select><br>
+         Details:<br>
+
+<textarea readonly id="txtOutput" rows=5 style='width: 98%; max-width: 98%;'></textarea>
+
+      </form>
+   </div>
+   <!-- outer frame -->
+</body>
+</html>
